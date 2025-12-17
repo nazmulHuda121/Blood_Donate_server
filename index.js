@@ -40,11 +40,12 @@ async function run() {
     });
 
     app.post('/user', async (req, res) => {
-      const { name, email, password, avatar, bloodGroup, district, upazila } =
-        req.body;
+      const { name, email, avatar, bloodGroup, district, upazila } = req.body;
+
       const existingUser = await userCollection.findOne({ email });
+
       if (existingUser) {
-        return res.send({ message: 'email already exist' });
+        return res.send({ message: 'user already exists' });
       }
 
       const userData = {
