@@ -63,6 +63,19 @@ async function run() {
       res.send(result);
     });
 
+    // Get user role by email
+    app.get('/users/:email/role', async (req, res) => {
+      const email = req.params.email;
+
+      const user = await userCollection.findOne({ email });
+
+      if (!user) {
+        return res.status(404).send({ role: 'donor' });
+      }
+
+      res.send({ role: user.role });
+    });
+
     //=================================================================//
 
     // Create donation request
