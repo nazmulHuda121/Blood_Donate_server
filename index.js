@@ -78,7 +78,6 @@ async function run() {
     });
 
     // Update user role
-    // server.js ba app.js (backend)
 
     // Update user role (donor → admin/volunteer, admin → volunteer, volunteer → admin)
     app.patch('/admin/users/role/:id', async (req, res) => {
@@ -110,6 +109,25 @@ async function run() {
       }
     });
 
+    // PATCH /user/:email
+    app.patch('/user/:email', async (req, res) => {
+      const email = req.params.email;
+      const { displayName, district, upazila, bloodGroup, photoURL } = req.body;
+
+      const update = { displayName, district, upazila, bloodGroup, photoURL };
+
+      try {
+        const result = await userCollection.updateOne(
+          { email },
+          { $set: update }
+        );
+        res.send({ success: true, result });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: 'Update failed' });
+      }
+    });
+
     //=================================================================//
 
     // Create donation request
@@ -138,6 +156,25 @@ async function run() {
       const cursor = donationCollection.find({});
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+    // SEARCH DONORS
+    app.get('/users/donors', async (req, res) => {
+      try {
+        const { bloodGroup, district, upazila } = req.query;
+
+        const query = { role: 'donor', status: 'active' };
+
+        if (bloodGroup) query.bloodGroup = bloodGroup;
+        if (district) query.district = district;
+        if (upazila) query.upazila = upazila;
+
+        const donors = await userCollection.find(query).toArray();
+        res.send(donors);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: 'Failed to load donors' });
+      }
     });
 
     // Send a ping to confirm a successful connection
