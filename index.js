@@ -5,7 +5,7 @@ const cors = require('cors');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const port = process.env.PORT || 5000;
 // const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const { ObjectId } = require('mongodb');
 
 // Middleware
 app.use(express.json());
@@ -75,6 +75,39 @@ async function run() {
       }
 
       res.send({ role: user.role });
+    });
+
+    // Update user role
+    // server.js ba app.js (backend)
+
+    // Update user role (donor → admin/volunteer, admin → volunteer, volunteer → admin)
+    app.patch('/admin/users/role/:id', async (req, res) => {
+      try {
+        const userId = req.params.id;
+        const { role: newRole } = req.body;
+
+        // Allowed roles
+        if (!['donor', 'volunteer', 'admin'].includes(newRole)) {
+          return res.status(400).send({ message: 'Invalid role' });
+        }
+
+        // Find the user
+        const user = await userCollection.findOne({
+          _id: new ObjectId(userId),
+        });
+        if (!user) return res.status(404).send({ message: 'User not found' });
+
+        // Update the role
+        await userCollection.updateOne(
+          { _id: new ObjectId(userId) },
+          { $set: { role: newRole } }
+        );
+
+        res.send({ success: true, message: `Role updated to ${newRole}` });
+      } catch (error) {
+        console.error('Role update error:', error);
+        res.status(500).send({ message: 'Internal Server Error' });
+      }
     });
 
     //=================================================================//
