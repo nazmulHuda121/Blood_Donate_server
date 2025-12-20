@@ -229,13 +229,33 @@ async function run() {
       try {
         const pendingRequests = await donationCollection
           .find({ status: 'pending' })
-          .sort({ createdAt: -1 }) // latest first
+          .sort({ createdAt: -1 })
           .toArray();
 
         res.send({ success: true, requests: pendingRequests });
       } catch (error) {
         console.error(error);
         res.status(500).send({ message: 'Failed to load pending requests' });
+      }
+    });
+    // GET donation request by id (Details page)
+    app.get('/donation-request/:id', async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const donation = await donationCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!donation) {
+          return res
+            .status(404)
+            .send({ message: 'Donation request not found' });
+        }
+
+        res.send(donation);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to load donation request' });
       }
     });
 
