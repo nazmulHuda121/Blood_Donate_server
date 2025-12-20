@@ -151,12 +151,102 @@ async function run() {
       }
     });
 
+    // ================== GET MY DONATION REQUESTS ==================
+
+    app.get('/donation-request', async (req, res) => {
+      try {
+        const { email, status, page = 1, limit = 10 } = req.query;
+
+        if (!email) {
+          return res.status(400).send({ message: 'Email is required' });
+        }
+
+        const query = { requesterEmail: email };
+        if (status) query.status = status;
+
+        const skip = (page - 1) * limit;
+
+        const requests = await donationCollection
+          .find(query)
+          .skip(parseInt(skip))
+          .limit(parseInt(limit))
+          .toArray();
+
+        const total = await donationCollection.countDocuments(query);
+
+        res.send({ requests, total });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: 'Failed to load donation requests' });
+      }
+    });
+
+    // ================== DELETE DONATION REQUEST ==================
+    app.delete('/donation-request/:id', async (req, res) => {
+      const id = req.params.id;
+
+      const result = await donationCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+
+      res.send({ success: true, result });
+    });
+
+    // ================== UPDATE DONATION STATUS ==================
+    app.patch('/donation-request/status/:id', async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+
+      const result = await donationCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status } }
+      );
+
+      res.send({ success: true, result });
+    });
+
+    // CONFIRM DONATION (donor accepts request)
+    app.patch('/donation-request/confirm/:id', async (req, res) => {
+      const { id } = req.params;
+      const { donorName, donorEmail } = req.body;
+
+      const result = await donationCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            status: 'inprogress',
+            donorName,
+            donorEmail,
+          },
+        }
+      );
+
+      res.send({ success: true, result });
+    });
+
+    // GET /donation-requests/pending
+    app.get('/donation-requests/pending', async (req, res) => {
+      try {
+        const pendingRequests = await donationCollection
+          .find({ status: 'pending' })
+          .sort({ createdAt: -1 }) // latest first
+          .toArray();
+
+        res.send({ success: true, requests: pendingRequests });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: 'Failed to load pending requests' });
+      }
+    });
+
     // Get all donation requests (optional, admin)
     app.get('/donation-requests', async (req, res) => {
       const cursor = donationCollection.find({});
       const result = await cursor.toArray();
       res.send(result);
     });
+
+    //-----------------------------------------------------//
 
     // SEARCH DONORS
     app.get('/users/donors', async (req, res) => {
